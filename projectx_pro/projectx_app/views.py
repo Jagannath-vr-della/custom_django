@@ -7,7 +7,7 @@ from projectx_app import models, serializers, permission
 from django.contrib.auth import hashers
 from .permission import Permission
 from django.apps import apps
-from .Token import generate_custom_model_token
+from .Token import generate_custom_model_token,TokenPermissionPost,TokenPermissionPut,TokenPermissionView,TokenPermissionDelete
 from .TokenPermission import TokenPermission
 
 

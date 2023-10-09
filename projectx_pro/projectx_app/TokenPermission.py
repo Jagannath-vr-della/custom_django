@@ -36,11 +36,11 @@ class TokenPermission(permissions.BasePermission):
                 if request.method == 'POST':
                     return self.has_permission_for_post(perm)
                 elif request.method == 'PUT':
-                    return self.has_permission_for_put(perm, view)
+                    return self.has_permission_for_put(perm)
                 elif request.method == 'GET':
-                    return self.has_permission_for_views(perm, view)
+                    return self.has_permission_for_views(perm)
                 elif request.method == 'DELETE':
-                    return self.has_permission_for_delete(perm, view)
+                    return self.has_permission_for_delete(perm)
 
                 return False
         except Exception as e:
