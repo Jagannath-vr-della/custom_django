@@ -50,7 +50,6 @@ class User(models.Model):
         db_table = 'user'
 
 
-
 class UserRoleManager(models.Manager):
     def add(self,r_id,u_id):
         user = self.model(r_id=r_id,user_id=u_id)
@@ -87,3 +86,16 @@ class Product(models.Model):
     class Meta:
         managed = False
         db_table = 'product'
+
+
+class Token(models.Model):
+    key = models.CharField(unique=True, max_length=40, blank=True, null=True)
+    created_at = models.DateTimeField(blank=True, null=True)
+    user = models.ForeignKey('User', models.DO_NOTHING)
+    id = models.BigAutoField(primary_key=True)
+
+    class Meta:
+        managed = False
+        db_table = 'token'
+
+

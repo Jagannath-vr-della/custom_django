@@ -1,18 +1,18 @@
-# from drf_yasg.utils import swagger_auto_schema
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework.generics import CreateAPIView, RetrieveAPIView, DestroyAPIView, UpdateAPIView
 from django.contrib.auth.hashers import check_password
 from rest_framework import status
-# from rest_framework.authentication import TokenAuthentication
 from rest_framework.response import Response
 from projectx_app import models, serializers, permission
 from django.contrib.auth import hashers
 from .permission import Permission
 from django.apps import apps
-from django.http import JsonResponse
-from rest_framework.permissions import IsAuthenticated
-from .Token import Token
+from .Token import generate_custom_model_token
+from .TokenPermission import TokenPermission
+
 
 class PermissionGenerator(CreateAPIView):
+    """This Api is used to Generate Permissions for models """
     serializer_class = serializers.ContentTypeSerializerCustom
 
     def post(self, request, *args, **kwargs):
@@ -52,50 +52,36 @@ class PermissionGenerator(CreateAPIView):
 
 
 class AddRole(CreateAPIView):
+    """This Api is used to Create Role and its Permissions """
     serializer_class = serializers.RoleSerializerCustom
 
     def post(self, request, *args, **kwargs):
         serializer_class = serializers.RoleSerializer(data=request.data)
         if serializer_class.is_valid():
-            show = Permission.objects.get(p_name='view_User_permission').p_id
-            add = permission.Permission.objects.get(p_name='create_User_permission').p_id
-            change = permission.Permission.objects.get(p_name='edit_User_permission').p_id
-            deleted = permission.Permission.objects.get(p_name='deleteUser_permission').p_id
+            serializer_class.save()
+            show = Permission.objects.get(p_name='view_Product_permission').p_id
+            add = permission.Permission.objects.get(p_name='create_Product_permission').p_id
+            change = permission.Permission.objects.get(p_name='edit_Product_permission').p_id
+            deleted = permission.Permission.objects.get(p_name='delete_Product_permission').p_id
             if serializer_class.data['role_name'] == "ADMIN":
-                serializer_class.save()
                 role = serializer_class.data['r_id']
-                # role = serializer_class.data['r_id']
-                # role = models.Roles.objects.filter('role_name')
                 models.RolePermission.objects.add(r_id=role, p_id=show)
                 models.RolePermission.objects.add(r_id=role, p_id=add)
                 models.RolePermission.objects.add(r_id=role, p_id=change)
                 models.RolePermission.objects.add(r_id=role, p_id=deleted)
-                # models.RolePermission.objects.add(role,add)
-                # models.RolePermission.objects.add(role,change)
-                # models.RolePermission.objects.add(role,deleted)
             elif serializer_class.data['role_name'] == "USER1":
-                serializer_class.save()
                 role = serializer_class.data['r_id']
-                # role = models.Roles.objects.filter('role_name')
                 models.RolePermission.objects.add(r_id=role, p_id=show)
                 models.RolePermission.objects.add(r_id=role, p_id=add)
                 models.RolePermission.objects.add(r_id=role, p_id=change)
-                # models.RolePermission.objects.add(role,add)
-                # models.RolePermission.objects.add(role,change)
-                # models.RolePermission.objects.add(role,deleted)
             elif serializer_class.data['role_name'] == "USER2":
-                serializer_class.save()
                 role = serializer_class.data['r_id']
-                # role = serializer_class.data['r_id']
-                # role = models.Roles.objects.filter('role_name')
                 models.RolePermission.objects.add(r_id=role, p_id=show)
-                # models.RolePermission.objects.add(role,add)
-                # models.RolePermission.objects.add(role,change)
-                # models.RolePermission.objects.add(role,deleted)
             return Response({'data': show})
 
 
 class Signup(CreateAPIView):
+    """This Api is used for Signup """
     serializer_class = serializers.SignupSerializerCustom
 
     def post(self, request, *args, **kwargs):
@@ -137,6 +123,7 @@ class Signup(CreateAPIView):
 
 
 class Login(CreateAPIView):
+    """This Api is used for Token creation and Login """
     serializer_class = serializers.LoginSerializer
 
     def post(self, request, *args, **kwargs):
@@ -146,7 +133,7 @@ class Login(CreateAPIView):
             if password_matches:
                 data = models.User.objects.filter(email=request.data['email'])
                 serializer = serializers.SignupSerializer(data, many=True)
-                token = Token.generate_custom_model_token(mail.user_id)
+                token = generate_custom_model_token(mail.user_id)
 
                 data_response = {
                     'response_code': status.HTTP_200_OK,
@@ -177,19 +164,21 @@ class Login(CreateAPIView):
 
 
 class CreateProduct(CreateAPIView):
-
+    """This Api is used to Create Products """
     serializer_class = serializers.ProductSerializer
+    permission_classes = [TokenPermission]
 
     def post(self, request, *args, **kwargs):
-        try :
+        try:
             serializer_class = serializers.ProductSerializer(data=request.data)
             if serializer_class.is_valid(raise_exception=True):
-                value =serializer_class.save()
+                value = serializer_class.save()
                 data_response = {
                     'response_code': status.HTTP_200_OK,
                     'message': "Product Created succesfully",
                     'status_flag': True,
                     'status': "success",
+                    'method':request.method,
                     'error_details': None,
                     'data': {'user': serializer_class.data}}
                 return Response(data_response)
@@ -211,3 +200,57 @@ class CreateProduct(CreateAPIView):
                 'error_details': str(error),
                 'data': []})
 
+
+class ProductDetails(RetrieveAPIView):
+    """This Api is used to Get Product Details with Authentication """
+    queryset = models.Product.objects.all()
+    permission_classes = [TokenPermission]
+
+    def get(self, request, *args, **kwargs):
+        queryset = models.Product.objects.all()
+        serializer_class = serializers.ProductSerializer(queryset, many=True)
+        response = {
+                    "status": status.HTTP_200_OK,
+                    "message": "success",
+                    "data": serializer_class.data,
+                    "request":request.method,
+                }
+        return Response(response, status=status.HTTP_200_OK)
+
+
+class DeleteProduct(DestroyAPIView):
+    """This Api is used to Delete Products """
+
+    serializer_class = serializers.DeleteProductSerializer
+    permission_classes = [TokenPermission]
+    queryset = models.Product.objects.all()
+
+    @swagger_auto_schema(request_body=serializer_class)
+    def delete(self, request, *args, **kwargs):
+        query = models.Product.objects.filter(id=request.data['id'])
+        query.delete()
+        response = {
+            "status": status.HTTP_200_OK,
+            "message": "successfully deleted",
+        }
+        return Response(response, status=status.HTTP_200_OK)
+
+
+class ChangeProduct(UpdateAPIView):
+    """This Api is used to Change Products """
+
+    serializer_class = serializers.UpdateSerializer
+    permission_classes = [TokenPermission]
+    queryset = models.Product.objects.all()
+
+    def put(self, request, *args, **kwargs):
+        changes = models.Product.objects.get(id=request.data['id'])
+        serializer_class = serializers.ProductSerializer(instance=changes, data=request.data)
+        if serializer_class.is_valid():
+            serializer_class.save()
+            data = {
+                'response': 'success',
+                'data': [serializer_class.data]
+            }
+            return Response(data)
+        return Response(serializer_class.errors)

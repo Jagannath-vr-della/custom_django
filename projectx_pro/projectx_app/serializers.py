@@ -56,3 +56,15 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = '__all__'
+
+
+class UpdateSerializer(serializers.Serializer):
+    product_name = serializers.CharField()
+    id = serializers.IntegerField()
+    price = serializers.CharField()
+    description = serializers.CharField()
+    pcount = serializers.CharField()
+
+
+class DeleteProductSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
